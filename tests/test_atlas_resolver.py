@@ -18,6 +18,7 @@ def base_objects() -> list[AtlasObject]:
         AtlasObject(id="gap:GAP-001", kind="gap", state="reported"),
         AtlasObject(id="behavior:gap-lifecycle", kind="behavior"),
         AtlasObject(id="behavior:special-gap", kind="behavior"),
+        AtlasObject(id="judgment:route-selection", kind="judgment"),
         AtlasObject(id="policy:evidence-required", kind="policy"),
         AtlasObject(id="capability:investigate", kind="capability"),
         AtlasObject(id="agent:pi", kind="agent"),
@@ -106,6 +107,8 @@ class ResolverTests(unittest.TestCase):
                     id="binding:gap",
                     subject_kind="gap",
                     behavior_id="behavior:gap-lifecycle",
+                    judgment_engine="jev",
+                    judgment_ids=["judgment:route-selection"],
                     capability_ids=["capability:investigate"],
                     policy_ids=["policy:evidence-required"],
                     executor_ids=["agent:pi"],
@@ -117,6 +120,8 @@ class ResolverTests(unittest.TestCase):
 
         result = resolve_event(catalog, event())
 
+        self.assertEqual(result.judgment_engine, "jev")
+        self.assertEqual(result.judgment_ids, ["judgment:route-selection"])
         self.assertEqual(result.capability_ids, ["capability:investigate"])
         self.assertEqual(result.executor_ids, ["agent:pi"])
         self.assertEqual(
@@ -127,6 +132,23 @@ class ResolverTests(unittest.TestCase):
             result.incoming_relationships,
             {"addresses": ["playbook:root-cause"]},
         )
+
+    def test_judgment_engine_defaults_to_none(self) -> None:
+        catalog = AtlasCatalog(
+            objects=base_objects(),
+            bindings=[
+                AtlasBinding(
+                    id="binding:deterministic-gap",
+                    subject_kind="gap",
+                    behavior_id="behavior:gap-lifecycle",
+                )
+            ],
+        )
+
+        result = resolve_event(catalog, event())
+
+        self.assertEqual(result.judgment_engine, "none")
+        self.assertEqual(result.judgment_ids, [])
 
     def test_equal_specificity_is_ambiguous_and_fails_closed(self) -> None:
         catalog = AtlasCatalog(
@@ -172,6 +194,33 @@ class ResolverTests(unittest.TestCase):
                     behavior_id="behavior:missing",
                 )
             ],
+        )
+
+        with self.assertRaises(AtlasCatalogError):
+            validate_catalog(catalog)
+
+    def test_dangling_judgment_reference_is_rejected(self) -> None:
+        catalog = AtlasCatalog(
+            objects=base_objects(),
+            bindings=[
+                AtlasBinding(
+                    id="binding:bad-judgment",
+                    subject_kind="gap",
+                    behavior_id="behavior:gap-lifecycle",
+                    judgment_engine="jev",
+                    judgment_ids=["judgment:missing"],
+                )
+            ],
+        )
+
+        with self.assertRaises(AtlasCatalogError):
+            validate_catalog(catalog)
+
+    def test_unknown_schema_version_is_rejected(self) -> None:
+        catalog = AtlasCatalog(
+            schema_version=99,
+            objects=base_objects(),
+            bindings=[],
         )
 
         with self.assertRaises(AtlasCatalogError):
