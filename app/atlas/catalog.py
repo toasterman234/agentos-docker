@@ -7,6 +7,8 @@ from pydantic import ValidationError
 
 from app.atlas.models import AtlasBinding, AtlasCatalog
 
+_SUPPORTED_SCHEMA_VERSION = 1
+
 
 class AtlasCatalogError(ValueError):
     """Catalog is structurally valid JSON but not safe to resolve."""
@@ -29,6 +31,7 @@ def _duplicates(values: list[str]) -> list[str]:
 def _binding_references(binding: AtlasBinding) -> list[tuple[str, str]]:
     refs: list[tuple[str, str]] = [("behavior_id", binding.behavior_id)]
     for field_name in (
+        "judgment_ids",
         "capability_ids",
         "policy_ids",
         "executor_ids",
@@ -40,9 +43,15 @@ def _binding_references(binding: AtlasBinding) -> list[tuple[str, str]]:
 
 
 def validate_catalog(catalog: AtlasCatalog) -> AtlasCatalog:
-    """Fail closed on duplicate IDs, dangling edges, or dangling binding refs."""
+    """Fail closed on unsupported versions, duplicate IDs, and dangling refs."""
 
     issues: list[str] = []
+    if catalog.schema_version != _SUPPORTED_SCHEMA_VERSION:
+        issues.append(
+            f"unsupported schema_version: {catalog.schema_version}; "
+            f"expected {_SUPPORTED_SCHEMA_VERSION}"
+        )
+
     object_ids = [item.id for item in catalog.objects]
     binding_ids = [item.id for item in catalog.bindings]
     object_id_set = set(object_ids)
