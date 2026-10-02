@@ -4,7 +4,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-JudgmentMode = Literal["none", "jev"]
+JudgmentEngine = Literal["none", "jev"]
 
 
 class AtlasObject(BaseModel):
@@ -30,11 +30,16 @@ class AtlasRelationship(BaseModel):
 
 
 class AtlasBinding(BaseModel):
-    """Declarative rule mapping an event/subject shape to an executable behavior.
+    """Declarative rule mapping an event/subject shape to runtime semantics.
 
     The binding does not decide whether a transition is legal. It only resolves
     which behavior (normally an XState machine) should receive the event and
-    which Atlas capabilities/policies/executors are in scope.
+    which Atlas components are in scope.
+
+    ``judgment_ids`` are Atlas Judgment objects. ``judgment_engine`` says whether
+    a judgment engine such as JEv is needed to evaluate them. Keeping those
+    separate prevents the runtime engine from being confused with the domain
+    judgment being applied.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -45,7 +50,8 @@ class AtlasBinding(BaseModel):
     subject_ids: list[str] = Field(default_factory=list)
     event_types: list[str] = Field(default_factory=lambda: ["*"])
     states: list[str] = Field(default_factory=lambda: ["*"])
-    judgment: JudgmentMode = "jev"
+    judgment_engine: JudgmentEngine = "none"
+    judgment_ids: list[str] = Field(default_factory=list)
     capability_ids: list[str] = Field(default_factory=list)
     policy_ids: list[str] = Field(default_factory=list)
     executor_ids: list[str] = Field(default_factory=list)
@@ -93,7 +99,8 @@ class AtlasResolution(BaseModel):
     event_type: str
     binding_id: str
     behavior_id: str
-    judgment: JudgmentMode
+    judgment_engine: JudgmentEngine
+    judgment_ids: list[str] = Field(default_factory=list)
     capability_ids: list[str] = Field(default_factory=list)
     policy_ids: list[str] = Field(default_factory=list)
     executor_ids: list[str] = Field(default_factory=list)
