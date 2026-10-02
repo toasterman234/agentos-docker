@@ -144,3 +144,29 @@ Those are later lifecycle steps. The next useful proof is to import one real Atl
 subject plus its behavior/judgment/capability/policy bindings, resolve one event,
 and compare the resolver result against the existing XState workflow before any
 execution is enabled.
+
+
+## Observed verification evidence
+
+As of branch head `6d471277d044acf4c9730c006b37a9550e421a04`:
+
+- The exact checked-in resolver/catalog/models/test sources were executed in an
+  isolated Python 3.13 + Pydantic 2.13 environment.
+- Result: **9 tests run, 9 passed**.
+- Python bytecode compilation of the resolver package and tests also passed.
+
+A full repository validation was then attempted through the governed Mac control
+plane rather than bypassing the project's normal machine-access rules.
+
+- control-plane health run: `36949643326`
+- result: `succeeded`; runner healthy and connected
+- verification clone run: `36949710567`
+- result: `rejected` by resource admission before clone/execution
+- reason: `reserve_critical_blocks_new_work`
+- observed free space: `12.15 GB`
+- pressure included disk reserve, Docker storage guard, offload integrity warning,
+  and high swap use.
+
+This is a deliberate safety refusal, not a resolver failure. No resource guard
+was bypassed. Full AgentOS repository validation on the Mac remains pending until
+the host returns above its configured reserve thresholds.
