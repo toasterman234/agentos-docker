@@ -9,6 +9,7 @@ from agno.registry import Registry
 from agno.tools.calculator import CalculatorTools
 
 from agents.manager import platform_manager
+from app.atlas.functions import resolve_atlas_event, validate_atlas_catalog
 from app.functions import (
     content_to_file,
     csv_to_markdown_table,
@@ -43,6 +44,8 @@ registry = Registry(
     models=[default_model()],
     dbs=[get_postgres_db()],
     functions=[
+        validate_atlas_catalog,
+        resolve_atlas_event,
         extract_json,
         extract_urls,
         json_to_csv,
